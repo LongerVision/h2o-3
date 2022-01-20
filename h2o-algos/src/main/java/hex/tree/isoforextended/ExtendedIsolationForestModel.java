@@ -3,12 +3,16 @@ package hex.tree.isoforextended;
 import hex.Model;
 import hex.ModelCategory;
 import hex.ModelMetrics;
+import hex.ScoreKeeper;
 import hex.tree.CompressedTree;
 import hex.tree.isofor.ModelMetricsAnomaly;
 import hex.tree.isoforextended.isolationtree.CompressedIsolationTree;
 import org.apache.log4j.Logger;
 import water.*;
 import water.fvec.Frame;
+import water.util.ArrayUtils;
+
+import java.util.Arrays;
 
 /**
  * 
@@ -110,6 +114,11 @@ public class ExtendedIsolationForestModel extends Model<ExtendedIsolationForestM
          */
         public int _sample_size;
 
+        /**
+         * Score every so many trees (no matter what)
+         */
+        public int _score_tree_interval = 0;
+
         public ExtendedIsolationForestParameters() {
             super();
             _ntrees = 100;
@@ -122,6 +131,8 @@ public class ExtendedIsolationForestModel extends Model<ExtendedIsolationForestM
 
         public int _ntrees;
         public long _sample_size;
+        public ScoreKeeper[] _scored_train;
+        public long[] _training_time_ms;
         
         public Key<CompressedIsolationTree>[] _iTreeKeys;
         
