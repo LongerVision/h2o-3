@@ -129,7 +129,7 @@ public class ExtendedIsolationForest extends ModelBuilder<ExtendedIsolationFores
 
     @Override
     public boolean haveMojo() {
-        return false;
+        return true;
     }
 
     private class ExtendedIsolationForestDriver extends Driver {
