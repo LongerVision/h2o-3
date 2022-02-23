@@ -2325,6 +2325,47 @@ h2o.pd_multi_plot <- function(object,
   })
 }
 
+.prepare_grouping_frames  <- function(newdata, grouping_variable) {
+  if (!grouping_variable %in% names(newdata))
+    stop("Grouping variable '" + grouping_variable + "' is not present in frame!")
+  if (!is.factor(newdata[[grouping_variable]]))
+    stop("Grouping variable has to be categorical!")
+  if (h2o.nlevels(newdata[[grouping_variable]]) > 10)
+    stop("Grouping variable option is supported only for variables with 10 or fewer levels!")
+  frames <- list()
+  i <- 1
+  categories <-  names(.get_feature_count(newdata[[grouping_variable]]))
+  for (curr_category in categories) {
+    key = paste("tmp_", curr_category, i, sep="")
+    expr = paste("(tmp= ", key, "(rows ", h2o.getId(newdata), " (==(cols ", h2o.getId(newdata), " [", which(names(newdata) == grouping_variable) - 1, "] ) '", curr_category, "') ))", sep="")
+    h2o.rapids(expr)
+    frames <- append(frames, h2o.getFrame(key))
+    i <- i + 1
+  }
+  return(frames)
+}
+
+.handle_grouping <- function (newdata, grouping_variable, column, target, max_levels, show_pdp, model) {
+  frames <- .prepare_grouping_frames(newdata, grouping_variable)
+  result <- list()
+  i <- 1
+  for (curr_frame in frames) {
+    plot = h2o.ice_plot(
+      model,
+      curr_frame,
+      column,
+      target,
+      max_levels,
+      show_pdp
+    )
+    subtitle = paste("grouping variable: ", grouping_variable, " = '", as.data.frame(curr_frame[[grouping_variable]])[1,1], "'", sep="")
+    result[[i]] <- plot + ggplot2::labs(subtitle=subtitle)
+    h2o.rm(curr_frame, cascade=FALSE)
+    i <- i + 1
+  }
+  return(result)
+}
+
 is_binomial_from_model <- function(model) {
   return(model@model$training_metrics@metrics$model_category == "Binomial")
 }
@@ -2393,7 +2434,10 @@ h2o.ice_plot <- function(model,
                          max_levels = 30,
                          show_pdp = TRUE,
                          binary_response_scale = c("response", "logodds"),
-                         centered = FALSE) {
+
+                         centered = FALSE,
+                         grouping_variable=NULL
+) {
   .check_for_ggplot2("3.3.0")
   # Used by tidy evaluation in ggplot2, since rlang is not required #' @importFrom rlang hack can't be used
   .data <- NULL
@@ -2411,6 +2455,10 @@ h2o.ice_plot <- function(model,
   if (!is_binomial & binary_response_scale == "logodds")
     stop("binary_response_scale cannot be set to 'logodds' value for non-binomial models!")
   show_logodds <- is_binomial & binary_response_scale == "logodds"
+
+  if (!is.null(grouping_variable)) {
+    return(.handle_grouping(newdata, grouping_variable, column, target, max_levels, show_pdp, model))
+  }
 
   with_no_h2o_progress({
     if (h2o.nlevels(newdata[[column]]) > max_levels) {
