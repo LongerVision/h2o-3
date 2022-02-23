@@ -2399,6 +2399,7 @@ is_binomial <- function(model) {
 #' @param binary_response_scale Option for binary model to display (on the y-axis) the logodds instead of the actual
 #'                          score. Can be one of: "response", "logodds". Defaults to "response".
 #' @param centered A boolean whether to center curves around 0 at the first valid x value or not. Defaults to FALSE.
+#' @param grouping_variable An option to group the data and provide separate sets of plots by the grouping variable values.
 #'
 #' @return A ggplot2 object
 #' @examples

@@ -1285,7 +1285,7 @@ def ice_plot(
         save_plot_path=None,  # type: Optional[str]
         show_pdp=True,  # type: bool
         binary_response_scale="response", # type: Literal["response", "logodds"]
-        centered=False # type: bool
+        centered=False, # type: bool
         grouping_variable=None,  # type: Optional[str]
         **kwargs
 ):  # type: (...) -> plt.Figure
