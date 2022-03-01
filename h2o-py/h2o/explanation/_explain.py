@@ -1,5 +1,5 @@
 # -*- encoding: utf-8 -*-
-
+import os
 import random
 import warnings
 from collections import OrderedDict, Counter, defaultdict
@@ -1230,18 +1230,20 @@ def pd_multi_plot(
 
 def _center(col):
     col[:] = col - col[0]
+
 def _prepare_grouping_frames(frame, grouping_variable):
-    if (grouping_variable not in frame.names):
+    _MAX_GROUPING_FRAME_CARDINALITY = 10
+    if grouping_variable not in frame.names:
         raise ValueError("Grouping variable '" + grouping_variable + "' is not present in frame!")
-    if (not frame[grouping_variable].isfactor()[0]):
+    if not frame[grouping_variable].isfactor()[0]:
         raise ValueError("Grouping variable has to be categorical!")
     categories = frame[grouping_variable].categories()
-    if len(categories) > 10:
+    if len(categories) > _MAX_GROUPING_FRAME_CARDINALITY:
         raise ValueError("Grouping variable option is supported only for variables with 10 or fewer levels!")
     frames = list()
-    for curr_category in categories:
-        key = "tmp_" + curr_category + str(random.randint(0,1000))
-        expr = "(tmp= " + key + "(rows " + frame.frame_id + " (==(cols " + frame.frame_id + " [" + str(frame.names.index(grouping_variable)) + "] ) '" + curr_category + "') ))"
+    for i, curr_category in enumerate(categories):
+        key = "tmp_{}{}".format(curr_category, str(i))
+        expr = "(tmp= {} (rows {} (==(cols {} [{}] ) '{}') ))".format(key, frame.frame_id, frame.frame_id, str(frame.names.index(grouping_variable)), curr_category)
         h2o.rapids(expr)
         frames.append(h2o.get_frame(key))
     return frames
@@ -1249,14 +1251,12 @@ def _prepare_grouping_frames(frame, grouping_variable):
 def _handle_grouping(frame, grouping_variable, save_plot_path, model, column, target, max_levels, figsize, colormap):
     frames = _prepare_grouping_frames(frame, grouping_variable)
     result = list()
-    if save_plot_path is not None:
-        len_path = len(save_plot_path)
-    i = 0
-    for curr_frame in frames:
+    for i, curr_frame in enumerate(frames):
         curr_category = frame[grouping_variable].categories()[i]
         curr_save_plot_path = None
         if save_plot_path is not None:
-            curr_save_plot_path = save_plot_path[:len_path-4] + "_" + curr_category + save_plot_path[len_path-4:]
+            root_path, ext = os.path.splitext(save_plot_path)
+            curr_save_plot_path = root_path + "_" + curr_category + ext
         group_label = "\ngrouping variable: {} = '{}'".format(grouping_variable, curr_category)
         plot = ice_plot(
             model,
@@ -1271,7 +1271,6 @@ def _handle_grouping(frame, grouping_variable, save_plot_path, model, column, ta
         )
         result.append(plot)
         h2o.remove(curr_frame.key, False)
-        i = i + 1
     return result
 
 def ice_plot(
@@ -1348,7 +1347,7 @@ def ice_plot(
     if frame.type(column) == "string":
         raise ValueError("String columns are not supported!")
 
-    if (grouping_variable != None):
+    if grouping_variable != None:
         return _handle_grouping(frame, grouping_variable, save_plot_path, model, column, target, max_levels, figsize, colormap)
 
     is_binomial = _is_binomial(model)
