@@ -64,10 +64,8 @@ def _get_cols_to_test(train, y):
 def _assert_list_of_plots_was_produced(cols_to_test, model, train, target, grouping_variable):
     for col in cols_to_test:
         if target is None:
-            save_plot_path = model.training_model_metrics()["model_category"] + "_" + col + ".png"
             ice_plot_result = model.ice_plot(train, col, grouping_variable=grouping_variable)
         else:
-            save_plot_path = model.training_model_metrics()["model_category"] + "_" + target + "_" + col + ".png"
             ice_plot_result = model.ice_plot(train, col, target="setosa", grouping_variable=grouping_variable)
         assert isinstance(ice_plot_result, list)
         assert isinstance(ice_plot_result[0].figure(), matplotlib.pyplot.Figure)
